@@ -11,7 +11,14 @@ const refs = {
   gallery: document.querySelector('.gallery'),
   loadMore: document.querySelector('.load-more'),
   targetEl: document.querySelector('.target-element'),
+  btnScroll: document.querySelector('.scroll-down'),
+  btnScrollTop:document.querySelector('.scroll-top'),
 };
+
+refs.btnScroll.classList.add('is-hidden');
+refs.btnScrollTop.classList.add('is-hidden');
+
+
 const getApiData = new GetApiData();
 let lightbox = null;
 
@@ -70,10 +77,19 @@ async function onSubmit(e) {
 
     Notify.success(`"Hooray! We found ${data.totalHits} images."`);
 
+    refs.btnScroll.classList.remove('is-hidden');
+    refs.btnScrollTop.classList.remove('is-hidden');
+
+    refs.btnScroll.addEventListener('click', onScrollClickDown);
+    refs.btnScrollTop.addEventListener('click', onScrollClickTop);
+
 
     if (getApiData.page * getApiData.perPage >= data.totalHits) {
       Notify.info("We're sorry, but you've reached the end of search results.");
-    
+      
+      refs.btnScroll.classList.add('is-hidden');
+      refs.btnScrollTop.classList.add('is-hidden');
+      
         intersectionObserver.unobserve(refs.targetEl);
 
     }
@@ -82,6 +98,64 @@ async function onSubmit(e) {
   }
 }
 
+function onScrollClickDown() {
+  const { height: cardHeight } = document
+  .querySelector(".gallery")
+  .firstElementChild.getBoundingClientRect();
+
+window.scrollBy({
+  top: cardHeight * 2,
+  behavior: "smooth",
+});
+}
+
+function onScrollClickTop() {
+  const { height: cardHeight } = document
+  .querySelector(".gallery")
+    .firstElementChild.getBoundingClientRect();
+  
+  window.scrollBy({
+    top: cardHeight * -1,
+    behavior: "smooth",
+});
+}
+
+
 refs.form.addEventListener('submit', onSubmit);
 
 /** */
+
+//! random photos + annimation //
+getApiData
+  .fetchRandomPhotos()
+  .then(({ data }) => {
+    refs.gallery.innerHTML = galleryItem(data.hits);
+
+    lightbox = new SimpleLightbox('.gallery a', {
+      captionsData: 'alt',
+      captionPosition: 'bottom',
+      captionDelay: 250,
+    });
+  })
+  .catch(err => {
+    console.log(err);
+  });
+
+const mutationObserver = new MutationObserver(mutationRecord => {
+  mutationRecord.forEach(mutation => {
+    const galleryElements = [...mutation.addedNodes].filter(
+      galleryNodeItem => galleryNodeItem.nodeName !== '#text'
+    );
+
+    setTimeout(() => {
+      galleryElements.forEach(galleryElement => {
+        galleryElement.classList.add('appear');
+      });
+    }, 0);
+  });
+});
+
+mutationObserver.observe(refs.gallery, {
+  childList: true,
+});
+
